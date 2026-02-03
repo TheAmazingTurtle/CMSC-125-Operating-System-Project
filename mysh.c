@@ -1,36 +1,49 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include "mysh.h"
 
-Command parse_line(char *line) {
-    // clean line and clear struct
-    line[strcspn(line, "\n")] = 0;
-    Command cmd = {0};
-    
-    // tokenize command
-    char *token = strtok(line, " ");
-    if (token == NULL) return cmd;
+char **tokenize(char *line) {
+    char **token_arr  = malloc(sizeof(char *) * 256);
+    if (!token_arr) return NULL;                        // check if memory is allocated
 
-    // get command name
-    cmd.command = token;
-    cmd.args[0] = token;
+    char *token;
 
-    // get command arguments
-    int i = 1;
-    token = strtok(NULL, " ");
-    while (token != NULL && i < 255) {
-        cmd.args[i++] = token;
-        token = strtok(NULL, " ");
+    line[strcspn(line, "\n")] = 0;                      // to strip \n from line
+
+    token = strtok(line, " ");
+    if (token == NULL) {
+        free(token_arr);
+        return NULL;
     }
 
-    // ensure args is NULL-terminated
+    int i = 0;
+    while (token != NULL && i < 255) {                  // limit to 255, leave space for NULL
+        token_arr[i++] = token;
+        token = strtok(NULL, " ");
+    }
+    token_arr[i] = NULL;
+
+    return token_arr;
+}
+
+Command parse(char **token_arr) {
+    Command cmd = {0};
+
+    cmd.command = token_arr[0];
+    cmd.args[0] = token_arr[0];
+
+    int i = 1;
+    while (token_arr[i]) {
+        cmd.args[i] = token_arr[i];
+        i++;
+    }
     cmd.args[i] = NULL;
 
-    // todo:
-    // - interpret command symbols
-    // - fill in missing fields
+    free(token_arr);                                    // prevent memory leak
+
 
     return cmd;
 }
@@ -81,7 +94,10 @@ int main() {
 
     // input loop
     while (fgets(buffer, sizeof(buffer), stdin)) {
-        Command cmd = parse_line(buffer);
+        char **token_arr = tokenize(buffer);
+        if (token_arr == NULL) continue;
+
+        Command cmd = parse(token_arr);
 
         // handle invalid input
         if (cmd.command == NULL) break;
