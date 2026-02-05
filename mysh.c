@@ -29,21 +29,53 @@ char **tokenize(char *line) {
     return token_arr;
 }
 
-Command parse(char **token_arr) {
-    Command cmd = {0};
+Command *parse(char **token_arr) {
+    Command *cmd = calloc(1, sizeof *cmd);
 
-    cmd.command = token_arr[0];
-    cmd.args[0] = token_arr[0];
+    cmd->command = token_arr[0];
+    cmd->args[0] = token_arr[0];
 
     int i = 1;
-    while (token_arr[i]) {
-        cmd.args[i] = token_arr[i];
-        i++;
+    while (token_arr[i]){
+        char *cur_token = token_arr[i];
+        char *next_token = token_arr[i+1];
+
+        if (strcmp(cur_token, ">") == 0 || strcmp(cur_token, ">>") == 0) {
+            if (cmd->output_file || !next_token) {
+                printf("syntax error: invalid output redirection\n");
+                return NULL;
+            }
+
+            cmd->append = strcmp(cur_token, ">>") == 0;
+            cmd->output_file = next_token;
+            i += 2;
+            continue;
+        }
+        
+        if (strcmp(cur_token, "<") == 0) {
+            if (cmd->input_file || !next_token) {
+                printf("syntax error: invalid input redirection\n");
+                return NULL;
+            }
+            cmd->input_file = next_token;
+            i += 2;
+            continue;
+        }
+        
+        if (strcmp(cur_token, "&") == 0) {
+            if (next_token) {
+                printf("syntax error: '&' must appear at end of command\n");
+                return NULL;
+            }
+            cmd->background = true;
+            i++;
+            continue;
+        } 
+
+        cmd->args[i++] = cur_token;
     }
-    cmd.args[i] = NULL;
 
     free(token_arr);                                    // prevent memory leak
-
 
     return cmd;
 }
@@ -90,30 +122,27 @@ int main() {
     // initialize stuff
     char buffer[256];
     char *prompt = "mysh> ";
-    printf("%s", prompt);
 
     // input loop
-    while (fgets(buffer, sizeof(buffer), stdin)) {
+    while (true) {
+        printf("%s", prompt);
+        fgets(buffer, sizeof(buffer), stdin);
+
         char **token_arr = tokenize(buffer);
         if (token_arr == NULL) continue;
 
-        Command cmd = parse(token_arr);
-
-        // handle invalid input
-        if (cmd.command == NULL) break;
+        Command *cmd = parse(token_arr);
+        if (cmd == NULL) continue;
 
         // debug print
-        printf("Command: %s\nArgs:\n%s", cmd.command, (cmd.args[1] ? "" : "(none)\n"));
-        for (int i = 1; cmd.args[i] != NULL; i++) {
-            printf("%d) %s\n", i, cmd.args[i]);
+        printf("Command: %s\nArgs:\n%s", cmd->command, (cmd->args[1] ? "" : "(none)\n"));
+        for (int i = 1; cmd->args[i] != NULL; i++) {
+            printf("%d) %s\n", i, cmd->args[i]);
         }
         printf("Output:\n");
 
         // handle command and check running status
-        if (!handle_command(&cmd)) break;
-
-        // next prompt
-        printf("%s", prompt);
+        if (!handle_command(cmd)) break;
     }
 
     return 0;
