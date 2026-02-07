@@ -1,17 +1,21 @@
 CC = gcc
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -Iinclude
+SRC = $(wildcard src/*.c)
+OBJ = $(SRC:.c=.o)
 TARGET = mysh
-SRC = mysh.c
 
 # CFLAGS enables common warning for better code quality
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET)
+$(TARGET): $(OBJ)
+	$(CC) $(OBJ) -o $(TARGET)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -f $(TARGET) *.o
+	rm -f $(OBJ) $(TARGET)

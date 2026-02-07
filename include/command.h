@@ -1,5 +1,5 @@
-#ifndef MYSH_H
-#define MYSH_H
+#ifndef COMMAND_H
+#define COMMAND_H
 
 #include <stdbool.h>
 
