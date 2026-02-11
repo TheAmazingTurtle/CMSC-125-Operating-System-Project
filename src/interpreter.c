@@ -6,7 +6,12 @@
 
 #include "interpreter.h"
 
+#define MAX_JOBS 100
+pid_t background_jobs[MAX_JOBS];
+int job_count = 0;
+
 bool handle_command(Command *cmd) {
+    // todo: separate built-in and external command handling
     if (strcmp(cmd->command, "pwd") == 0) {
         // uses getcwd() from unistd.h
         char cwd[1024];
@@ -67,6 +72,12 @@ bool handle_command(Command *cmd) {
             perror("exec failed");
             exit(127);
         } else {  // parent process
+            // debug print background_jobs
+            // printf("Current background jobs:\n");
+            // for (int i = 0; i < job_count; i++) {
+            //     printf("  [%d] PID: %d\n", i + 1, background_jobs[i]);
+            // }
+
             if (!cmd->background) {
                 int status;
                 waitpid(pid, &status, 0);
@@ -78,9 +89,30 @@ bool handle_command(Command *cmd) {
                 }
             } else {
                 printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
-                // todo: add pid to background job list
+                background_jobs[job_count++] = pid;
             }
         }
     }
     return true;
+}
+
+void cleanup_zombies() {
+    for (int i = 0; i < job_count; i++) {
+        int status;
+        pid_t result = waitpid(background_jobs[i], &status, WNOHANG);
+
+        if (result > 0) {
+            // result is PID of completed child process
+            printf("\n[Background job %d completed]\n", result);
+            
+            // shift remaining jobs to the left to remove completed job
+            for (int j = i; j < job_count - 1; j++) {
+                background_jobs[j] = background_jobs[j + 1];
+            }
+            job_count--;
+            i--;
+        } else if (result == -1) {
+            perror("waitpid failed");
+        }
+    }
 }
