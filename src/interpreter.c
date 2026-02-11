@@ -2,17 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "interpreter.h"
 
 bool handle_command(Command *cmd) {
-    if (strcmp(cmd->command, "echo") == 0) {
-        // sample echo implementation
-        for (int i = 1; cmd->args[i] != NULL; i++) {
-            printf("%s ", cmd->args[i]);
-        }
-        printf("\n");
-    } else if (strcmp(cmd->command, "pwd") == 0) {
+    if (strcmp(cmd->command, "pwd") == 0) {
         // uses getcwd() from unistd.h
         char cwd[1024];
         if (getcwd(cwd, sizeof(cwd)) != NULL) {
@@ -37,8 +32,55 @@ bool handle_command(Command *cmd) {
         printf("Exiting mysh...\n");
         return false;
     } else {
-        // invalid command
-        printf("mysh: command not found: %s\n", cmd->command);
+        pid_t pid = fork();
+
+        if (pid < 0) {
+            perror("fork failed");
+            return -1;
+        }
+
+        if (pid == 0) { // child process
+            // use input_file and output_file to redirect stdin and stdout
+            if (cmd->input_file) {
+                int fd = open(cmd->input_file, O_RDONLY);
+                if (fd < 0) {
+                    perror("open input file");
+                    exit(1);
+                }
+                dup2(fd, STDIN_FILENO);
+                close(fd);
+            }
+            if (cmd->output_file) {
+                int flags = O_WRONLY | O_CREAT;
+                flags |= cmd->append ? O_APPEND : O_TRUNC;
+                int fd = open(cmd->output_file, flags, 0644);
+                if (fd < 0) {
+                    perror("open output file");
+                    exit(1);
+                }
+                dup2(fd, STDOUT_FILENO);
+                close(fd);
+            }
+
+            // execute command using execvp()
+            execvp(cmd->command, cmd->args);
+            perror("exec failed");
+            exit(127);
+        } else {  // parent process
+            if (!cmd->background) {
+                int status;
+                waitpid(pid, &status, 0);
+                if (WIFEXITED(status)) {
+                    int exit_code = WEXITSTATUS(status);
+                    if (exit_code != 0) {
+                        printf("Command exited with code %d\n", exit_code);
+                    }
+                }
+            } else {
+                printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
+                // todo: add pid to background job list
+            }
+        }
     }
     return true;
 }
