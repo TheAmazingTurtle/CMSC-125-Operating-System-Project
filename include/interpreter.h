@@ -5,5 +5,6 @@
 #include "command.h"
 
 bool handle_command(Command *cmd);
+void cleanup_zombes();
 
 #endif
