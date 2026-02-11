@@ -24,10 +24,14 @@ int main() {
         if (cmd == NULL) continue;
 
         // debug print
-        printf("Command: %s\nArgs:\n%s", cmd->command, (cmd->args[1] ? "" : "(none)\n"));
-        for (int i = 1; cmd->args[i] != NULL; i++) {
-            printf("%d) %s\n", i, cmd->args[i]);
+        printf("Command: %s\nArgs: ", cmd->command);
+        for (int i = 0; cmd->args[i] != NULL; i++) {
+            printf("%s ", cmd->args[i]);
         }
+        printf("\nInput file: %s\n", cmd->input_file ? cmd->input_file : "");
+        printf("Output file: %s\n", cmd->output_file ? cmd->output_file : "");
+        printf("Append: %s\n", cmd->append ? "true" : "false");
+        printf("Background: %s\n", cmd->background ? "true" : "false");
         printf("Output:\n");
 
         // handle command and check running status
