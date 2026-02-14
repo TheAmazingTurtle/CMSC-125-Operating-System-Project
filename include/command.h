@@ -12,4 +12,6 @@ typedef struct {
     bool background;
 } Command;
 
+void free_command(Command *cmd);
+
 #endif
