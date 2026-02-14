@@ -6,10 +6,12 @@
 #include "parser.h"
 
 Command *parse(char **token_arr) {
+    if (!token_arr || !token_arr[0]) return NULL;
+
     Command *cmd = calloc(1, sizeof *cmd);
 
-    cmd->command = token_arr[0];
-    cmd->args[0] = token_arr[0];
+    cmd->command = strdup(token_arr[0]);
+    cmd->args[0] = strdup(token_arr[0]);
 
     int i = 1;
     while (token_arr[i]){
@@ -23,7 +25,7 @@ Command *parse(char **token_arr) {
             }
 
             cmd->append = strcmp(cur_token, ">>") == 0;
-            cmd->output_file = next_token;
+            cmd->output_file = strdup(next_token);
             i += 2;
             continue;
         }
@@ -33,7 +35,8 @@ Command *parse(char **token_arr) {
                 printf("syntax error: invalid input redirection\n");
                 return NULL;
             }
-            cmd->input_file = next_token;
+            
+            cmd->input_file = strdup(next_token);
             i += 2;
             continue;
         }
@@ -43,15 +46,14 @@ Command *parse(char **token_arr) {
                 printf("syntax error: '&' must appear at end of command\n");
                 return NULL;
             }
+
             cmd->background = true;
             i++;
             continue;
         } 
 
-        cmd->args[i++] = cur_token;
+        cmd->args[i++] = strdup(cur_token);
     }
-
-    free(token_arr);                                    // prevent memory leak
 
     return cmd;
 }
