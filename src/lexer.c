@@ -19,10 +19,20 @@ char **tokenize(char *line) {
 
     int i = 0;
     while (token != NULL && i < 255) {                  // limit to 255, leave space for NULL
-        token_arr[i++] = token;
+        token_arr[i++] = strdup(token);
         token = strtok(NULL, " ");
     }
     token_arr[i] = NULL;
 
     return token_arr;
+}
+
+void free_tokens(char **token_arr){
+    if (!token_arr) return;
+
+    for (int i = 0; token_arr[i] != NULL; i++) {
+        free(token_arr[i]);
+    }
+
+    free(token_arr);
 }
