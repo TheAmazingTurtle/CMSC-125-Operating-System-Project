@@ -25,6 +25,11 @@ bool handle_command(Command *cmd) {
         return handle_builtin_command(cmd);
 
     } else {
+        if (job_count >= MAX_JOBS) {
+            printf("mysh: Maximum background job limit reached\n");
+            return true;
+        }
+
         pid_t pid = fork();
 
         if (pid < 0) {
@@ -116,7 +121,7 @@ bool handle_builtin_command(Command *cmd) {
         // uses chdir() from unistd.h
         if (cmd->args[1] == NULL) {
             // no argument provided
-            printf("mysh: missing operand for command: cd\n");
+            printf("mysh: Missing operand for command: cd\n");
         } else {
             if (chdir(cmd->args[1]) == 0) {
                 printf("Changing directory...\n");
