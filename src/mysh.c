@@ -32,6 +32,8 @@ int main() {
 
         // handle command and check running status
         bool running_status = handle_command(cmd);
+        if (!running_status) break;
+
         free_command(cmd);
     }
 

@@ -11,33 +11,25 @@
 pid_t background_jobs[MAX_JOBS];
 int job_count = 0;
 
+const char *builtin_commands[] = {
+    "pwd",
+    "cd",
+    "exit"
+};
+
+bool is_builtin_command(const char *cmd);
+bool handle_builtin_command(Command *cmd);
+
 bool handle_command(Command *cmd) {
-    // todo: separate built-in and external command handling
-    if (strcmp(cmd->command, "pwd") == 0) {
-        // uses getcwd() from unistd.h
-        char cwd[1024];
-        if (getcwd(cwd, sizeof(cwd)) != NULL) {
-            printf("%s\n", cwd);
-        } else {
-            perror("getcwd() error");
-        }
-    } else if (strcmp(cmd->command, "cd") == 0) {
-        // uses chdir() from unistd.h
-        if (cmd->args[1] == NULL) {
-            //  no argument provided
-            printf("mysh: missing operand for command: cd\n");
-        } else {
-            if (chdir(cmd->args[1]) == 0) {
-                printf("Changing directory...\n");
-            } else {
-                perror("mysh");
-            }
-        }
-    } else if (strcmp(cmd->command, "exit") == 0) {
-        // terminates shell
-        printf("Exiting mysh...\n");
-        return false;
+    if (is_builtin_command(cmd->command)) {
+        return handle_builtin_command(cmd);
+
     } else {
+        if (job_count >= MAX_JOBS) {
+            printf("mysh: Maximum background job limit reached\n");
+            return true;
+        }
+
         pid_t pid = fork();
 
         if (pid < 0) {
@@ -72,6 +64,7 @@ bool handle_command(Command *cmd) {
             execvp(cmd->command, cmd->args);
             perror("exec failed");
             exit(127);
+
         } else {  // parent process
             // debug print background_jobs
             // printf("Current background jobs:\n");
@@ -94,6 +87,50 @@ bool handle_command(Command *cmd) {
             }
         }
     }
+
+    return true;
+}
+
+bool is_builtin_command(const char *cmd) {
+    for (size_t i = 0; i < sizeof(builtin_commands) / sizeof(builtin_commands[0]); i++) {
+        if (strcmp(cmd, builtin_commands[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool handle_builtin_command(Command *cmd) {
+    if (strcmp(cmd->command, "exit") == 0) {
+        // terminates shell
+        printf("Exiting mysh...\n");
+        return false;
+    }
+
+    if (strcmp(cmd->command, "pwd") == 0) {
+        // uses getcwd() from unistd.h
+        char cwd[1024];
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+            printf("%s\n", cwd);
+        } else {
+            perror("getcwd() error");
+        }
+    }
+    
+    if (strcmp(cmd->command, "cd") == 0) {
+        // uses chdir() from unistd.h
+        if (cmd->args[1] == NULL) {
+            // no argument provided
+            printf("mysh: Missing operand for command: cd\n");
+        } else {
+            if (chdir(cmd->args[1]) == 0) {
+                printf("Changing directory...\n");
+            } else {
+                perror("mysh");
+            }
+        }
+    }
+    
     return true;
 }
 

@@ -19,3 +19,8 @@ run: $(TARGET)
 
 clean:
 	rm -f $(OBJ) $(TARGET)
+
+test: $(TARGET)
+	@echo "Running tests..."
+	@mkdir -p test
+	chmod +x test_mysh.sh && ./test_mysh.sh
