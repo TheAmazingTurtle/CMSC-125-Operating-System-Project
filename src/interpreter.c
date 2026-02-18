@@ -94,7 +94,11 @@ static bool launch_external_command(Command *cmd) {
                 perror("open input file");
                 exit(1);
             }
-            dup2(fd, STDIN_FILENO);
+
+            if (dup2(fd, STDIN_FILENO) == -1) {
+                perror("dup2 failed");
+                _exit(EXIT_FAILURE);
+            }
             close(fd);
         }
         if (cmd->output_file) {
@@ -105,7 +109,11 @@ static bool launch_external_command(Command *cmd) {
                 perror("open output file");
                 exit(1);
             }
-            dup2(fd, STDOUT_FILENO);
+
+            if (dup2(fd, STDOUT_FILENO) == -1) {
+                perror("dup2 failed");
+                _exit(EXIT_FAILURE);
+            }
             close(fd);
         }
 
@@ -119,7 +127,7 @@ static bool launch_external_command(Command *cmd) {
         } else {
             perror("execvp");
         }
-        
+
         exit(127);
     }
       
