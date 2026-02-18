@@ -92,7 +92,7 @@ static bool launch_external_command(Command *cmd) {
             int fd = open(cmd->input_file, O_RDONLY);
             if (fd < 0) {
                 perror("open input file");
-                exit(1);
+                _exit(1);
             }
 
             if (dup2(fd, STDIN_FILENO) == -1) {
@@ -107,7 +107,7 @@ static bool launch_external_command(Command *cmd) {
             int fd = open(cmd->output_file, flags, 0644);
             if (fd < 0) {
                 perror("open output file");
-                exit(1);
+                _exit(1);
             }
 
             if (dup2(fd, STDOUT_FILENO) == -1) {
@@ -128,7 +128,7 @@ static bool launch_external_command(Command *cmd) {
             perror("execvp");
         }
 
-        exit(127);
+        _exit(127);
     }
       
     // parent process
