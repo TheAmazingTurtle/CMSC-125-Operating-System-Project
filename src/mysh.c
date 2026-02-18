@@ -22,6 +22,7 @@ int main() {
         fflush(stdout);
         
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
+        buffer[strcspn(buffer, "\n")] = 0;                          // to strip \n from line
 
         char **token_arr = tokenize(buffer);
         if (token_arr == NULL) continue;

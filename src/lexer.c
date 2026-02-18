@@ -9,12 +9,10 @@ char **tokenize(char *line) {
 
     char *token;
 
-    line[strcspn(line, "\n")] = 0;                      // to strip \n from line
-
     token = strtok(line, " ");
     if (token == NULL) {
-        free(token_arr);
-        return NULL;
+        token_arr[0] = NULL;
+        return token_arr;
     }
 
     int i = 0;
