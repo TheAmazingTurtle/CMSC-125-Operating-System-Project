@@ -1,4 +1,8 @@
 *.o
 *.txt
 
+tests/*
+!tests/*.c
+!tests/*.sh
+
 mysh
