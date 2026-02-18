@@ -31,10 +31,7 @@ int main() {
         free_tokens(token_arr);
         if (cmd == NULL) continue;
 
-        // handle command and check running status
-        bool running_status = handle_command(cmd);
-        if (!running_status) break;
-
+        handle_command(cmd);
         free_command(cmd);
     }
 
