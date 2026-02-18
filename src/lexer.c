@@ -5,7 +5,7 @@
 
 char **tokenize(char *line) {
     char **token_arr  = malloc(sizeof(char *) * 256);
-    if (!token_arr) return NULL;                        // check if memory is allocated
+    if (!token_arr || !line) return NULL;                        // check if memory is allocated
 
     char *token;
 
