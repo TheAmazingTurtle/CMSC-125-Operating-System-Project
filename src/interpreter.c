@@ -22,22 +22,17 @@ void handle_command(Command *cmd) {
 
 
 void cleanup_zombies() {
-    for (int i = 0; i < job_count; i++) {
-        int status;
-        pid_t result = waitpid(background_jobs[i], &status, WNOHANG);
+    int status;
+    pid_t pid;
 
-        if (result > 0) {
-            // result is PID of completed child process
-            printf("\n[Background job %d completed]\n", result);
-            
-            // shift remaining jobs to the left to remove completed job
-            for (int j = i; j < job_count - 1; j++) {
-                background_jobs[j] = background_jobs[j + 1];
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {                     // ensures all finished jobs in this interation is exorcised
+        printf("\n[Background job %d completed]\n", pid);
+        
+        for (int i = 0; i < job_count; i++) {                               // search-and-replace, faster implementation than shifting
+            if (background_jobs[i] == pid) {
+                background_jobs[i] = background_jobs[--job_count];
+                break;
             }
-            job_count--;
-            i--;
-        } else if (result == -1) {
-            perror("waitpid failed");
         }
     }
 }
