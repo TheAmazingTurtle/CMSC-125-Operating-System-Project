@@ -5,16 +5,14 @@
 
 char **tokenize(char *line) {
     char **token_arr  = malloc(sizeof(char *) * 256);
-    if (!token_arr) return NULL;                        // check if memory is allocated
+    if (!token_arr || !line) return NULL;                        // check if memory is allocated
 
     char *token;
 
-    line[strcspn(line, "\n")] = 0;                      // to strip \n from line
-
     token = strtok(line, " ");
     if (token == NULL) {
-        free(token_arr);
-        return NULL;
+        token_arr[0] = NULL;
+        return token_arr;
     }
 
     int i = 0;

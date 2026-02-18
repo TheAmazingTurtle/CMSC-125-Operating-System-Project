@@ -22,6 +22,7 @@ int main() {
         fflush(stdout);
         
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
+        buffer[strcspn(buffer, "\n")] = 0;                          // to strip \n from line
 
         char **token_arr = tokenize(buffer);
         if (token_arr == NULL) continue;
@@ -30,10 +31,7 @@ int main() {
         free_tokens(token_arr);
         if (cmd == NULL) continue;
 
-        // handle command and check running status
-        bool running_status = handle_command(cmd);
-        if (!running_status) break;
-
+        handle_command(cmd);
         free_command(cmd);
     }
 
