@@ -7,7 +7,6 @@
 
 #include "interpreter.h"
 
-#define MAX_JOBS 100
 pid_t background_jobs[MAX_JOBS];
 int job_count = 0;
 
