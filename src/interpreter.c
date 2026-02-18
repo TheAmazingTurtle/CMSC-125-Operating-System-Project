@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <sys/wait.h>
 
 #include "interpreter.h"
@@ -110,7 +111,15 @@ static bool launch_external_command(Command *cmd) {
 
         // execute command using execvp()
         execvp(cmd->command, cmd->args);
-        perror("exec failed");
+
+        if (errno == ENOENT) {
+            fprintf(stderr, "Command '%s' not found\n", cmd->command);
+        } else if (errno == EACCES) {
+            fprintf(stderr, "Permission denied for command '%s'\n", cmd->command);
+        } else {
+            perror("execvp");
+        }
+        
         exit(127);
     }
       
