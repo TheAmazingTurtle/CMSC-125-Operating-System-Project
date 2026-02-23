@@ -2,17 +2,18 @@
 
 #include "command.h"
 
-void free_command(Command *cmd) {
-    if (!cmd) return;
+void free_command(Command **cmd) {
+    if (!cmd || !*cmd) return;
 
-    free(cmd->command);
+    free((*cmd)->command);
 
-    for (int i = 0; cmd->args[i]; i++) {
-        free(cmd->args[i]);
+    for (int i = 0; (*cmd)->args[i]; i++) {
+        free((*cmd)->args[i]);
     }
 
-    free(cmd->input_file);
-    free(cmd->output_file);
+    free((*cmd)->input_file);
+    free((*cmd)->output_file);
 
-    free(cmd);
+    free(*cmd);
+    *cmd = NULL;
 }
