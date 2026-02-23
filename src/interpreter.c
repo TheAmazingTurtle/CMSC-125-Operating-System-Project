@@ -7,9 +7,11 @@
 #include <sys/wait.h>
 
 #include "interpreter.h"
+#include "process.h"
 
-pid_t background_jobs[MAX_JOBS];
-int job_count = 0;
+// debug array
+Process completed_processes[MAX_PROCESSES];
+int completed_processes_count = 0;
 
 static bool execute_builtin_command(Command *cmd);
 static bool launch_external_command(Command *cmd);
@@ -20,7 +22,6 @@ void handle_command(Command *cmd) {
     launch_external_command(cmd);
 }
 
-
 void cleanup_zombies() {
     int status;
     pid_t pid;
@@ -28,12 +29,21 @@ void cleanup_zombies() {
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {                     // ensures all finished jobs in this interation is exorcised
         printf("\n[Background job %d completed]\n", pid);
         
-        for (int i = 0; i < job_count; i++) {                               // search-and-replace, faster implementation than shifting
-            if (background_jobs[i] == pid) {
-                background_jobs[i] = background_jobs[--job_count];
+        for (int i = 0; i < process_count; i++) {                               // search-and-replace, faster implementation than shifting
+            if (process_table[i].pid == pid) {
+                process_table[i].is_active = 0;
+                free_command(process_table[i].cmd_ptr);
+                completed_processes[completed_processes_count++] = process_table[i];
+                process_table[i] = process_table[--process_count];
                 break;
             }
         }
+    }
+
+    // debug print
+    printf("Completed background jobs:\n");
+    for (int i = 0; i < completed_processes_count; i++) {
+        printf("%d\n", completed_processes[i].pid);
     }
 }
 
@@ -70,7 +80,7 @@ static bool execute_builtin_command(Command *cmd) {
 }
 
 static bool launch_external_command(Command *cmd) {
-    if (job_count >= MAX_JOBS) {
+    if (process_count >= MAX_PROCESSES) {
         printf("mysh: Maximum background job limit reached\n");
         return;
     }
@@ -130,6 +140,7 @@ static bool launch_external_command(Command *cmd) {
     if (!cmd->background) {
         int status;
         waitpid(pid, &status, 0);
+        free_command(cmd);
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
             if (exit_code != 0) {
@@ -138,6 +149,6 @@ static bool launch_external_command(Command *cmd) {
         }
     } else {
         printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
-        background_jobs[job_count++] = pid;
+        process_table[process_count++] = (Process){.pid = pid, .cmd_ptr = cmd, .is_active = 1};
     }
 }
