@@ -6,18 +6,23 @@
 #include <errno.h>
 #include <sys/wait.h>
 
+#include "background_job.h"
 #include "interpreter.h"
 
-pid_t background_jobs[MAX_JOBS];
-int job_count = 0;
+static BackgroundJob background_jobs[MAX_JOBS];
+static int job_count = 0;
 
 static bool execute_builtin_command(Command *cmd);
 static bool launch_external_command(Command *cmd);
+static void terminate_child(Command *cmd, char *error_msg, int exit_code);
 
-void handle_command(Command *cmd) {
-    if (execute_builtin_command(cmd)) return;
+void handle_command(Command **cmd) {
+    if (execute_builtin_command(*cmd)) return;
 
-    launch_external_command(cmd);
+    Command *to_exec = detach_command(cmd);
+    if (!launch_external_command(to_exec)){
+        free_command(&to_exec);
+    }
 }
 
 
@@ -29,7 +34,8 @@ void cleanup_zombies() {
         printf("\n[Background job %d completed]\n", pid);
         
         for (int i = 0; i < job_count; i++) {                               // search-and-replace, faster implementation than shifting
-            if (background_jobs[i] == pid) {
+            if (background_jobs[i].pid == pid) {
+                free_command(&(background_jobs[i].cmd));
                 background_jobs[i] = background_jobs[--job_count];
                 break;
             }
@@ -72,43 +78,29 @@ static bool execute_builtin_command(Command *cmd) {
 static bool launch_external_command(Command *cmd) {
     if (job_count >= MAX_JOBS) {
         printf("mysh: Maximum background job limit reached\n");
-        return;
+        return false;
     }
 
     pid_t pid = fork();
 
     if (pid < 0) {
         perror("fork failed");
-        return;
+        return false;
     }
 
     if (pid == 0) {     // child process
         if (cmd->input_file) {
             int fd = open(cmd->input_file, O_RDONLY);
-            if (fd < 0) {
-                perror("open input file");
-                _exit(1);
-            }
-
-            if (dup2(fd, STDIN_FILENO) == -1) {
-                perror("dup2 failed");
-                _exit(EXIT_FAILURE);
-            }
+            if (fd < 0) terminate_child(cmd, "open input file", EXIT_FAILURE);
+            if (dup2(fd, STDIN_FILENO) == -1) terminate_child(cmd, "dup2 failed", EXIT_FAILURE);
             close(fd);
         }
         if (cmd->output_file) {
             int flags = O_WRONLY | O_CREAT;
             flags |= cmd->append ? O_APPEND : O_TRUNC;
             int fd = open(cmd->output_file, flags, 0644);
-            if (fd < 0) {
-                perror("open output file");
-                _exit(1);
-            }
-
-            if (dup2(fd, STDOUT_FILENO) == -1) {
-                perror("dup2 failed");
-                _exit(EXIT_FAILURE);
-            }
+            if (fd < 0) terminate_child(cmd, "open output file", EXIT_FAILURE);
+            if (dup2(fd, STDOUT_FILENO) == -1) terminate_child(cmd, "dup2 failed", EXIT_FAILURE);
             close(fd);
         }
 
@@ -123,7 +115,7 @@ static bool launch_external_command(Command *cmd) {
             perror("execvp");
         }
 
-        _exit(127);
+        terminate_child(cmd, NULL, 127);
     }
       
     // parent process
@@ -136,8 +128,16 @@ static bool launch_external_command(Command *cmd) {
                 printf("Command exited with code %d\n", exit_code);
             }
         }
+        free_command(&cmd);
     } else {
         printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
-        background_jobs[job_count++] = pid;
+        background_jobs[job_count++] = (BackgroundJob){.pid = pid, .cmd = cmd};
     }
+    return true;
+}
+
+static void terminate_child(Command *cmd, char *error_msg, int exit_code){
+    if (cmd) free_command(&cmd);
+    if (error_msg) perror(error_msg);
+    _exit(exit_code);
 }

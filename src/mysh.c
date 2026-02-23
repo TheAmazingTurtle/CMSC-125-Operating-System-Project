@@ -31,8 +31,8 @@ int main() {
         free_tokens(token_arr);
         if (cmd == NULL) continue;
 
-        handle_command(cmd);
-        free_command(cmd);
+        handle_command(&cmd);
+        free_command(&cmd);
     }
 
     return 0;
