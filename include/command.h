@@ -12,6 +12,7 @@ typedef struct {
     bool background;
 } Command;
 
+Command *detach_command(Command **source);
 void free_command(Command **cmd);
 
 #endif

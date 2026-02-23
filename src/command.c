@@ -2,6 +2,14 @@
 
 #include "command.h"
 
+Command* detach_command(Command **source) {
+    if (source == NULL || *source == NULL) return NULL;
+    
+    Command *temp = *source;
+    *source = NULL;
+    return temp;
+}
+
 void free_command(Command **cmd) {
     if (!cmd || !*cmd) return;
 
