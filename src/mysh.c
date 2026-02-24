@@ -32,7 +32,6 @@ int main() {
         if (cmd == NULL) continue;
 
         handle_command(cmd);
-        free_command(cmd);
     }
 
     return 0;
