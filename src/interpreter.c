@@ -19,6 +19,7 @@ int completed_processes_count = 0;
 
 static bool execute_builtin_command(Command *cmd);
 static bool launch_external_command(Command *cmd);
+static void terminate_child(const char *error_message, Command *cmd, int exit_status);
 
 void handle_command(Command *cmd) {
     if (execute_builtin_command(cmd)) return;
@@ -99,30 +100,16 @@ static bool launch_external_command(Command *cmd) {
     if (pid == 0) {     // child process
         if (cmd->input_file) {
             int fd = open(cmd->input_file, O_RDONLY);
-            if (fd < 0) {
-                perror("open input file");
-                _exit(1);
-            }
-
-            if (dup2(fd, STDIN_FILENO) == -1) {
-                perror("dup2 failed");
-                _exit(EXIT_FAILURE);
-            }
+            if (fd < 0) terminate_child("open input", cmd, EXIT_FAILURE);
+            if (dup2(fd, STDIN_FILENO) == -1) terminate_child("dup2 failed", cmd, EXIT_FAILURE);
             close(fd);
         }
         if (cmd->output_file) {
             int flags = O_WRONLY | O_CREAT;
             flags |= cmd->append ? O_APPEND : O_TRUNC;
             int fd = open(cmd->output_file, flags, 0644);
-            if (fd < 0) {
-                perror("open output file");
-                _exit(1);
-            }
-
-            if (dup2(fd, STDOUT_FILENO) == -1) {
-                perror("dup2 failed");
-                _exit(EXIT_FAILURE);
-            }
+            if (fd < 0) terminate_child("open output", cmd, EXIT_FAILURE);
+            if (dup2(fd, STDOUT_FILENO) == -1) terminate_child("dup2 failed", cmd, EXIT_FAILURE);
             close(fd);
         }
 
@@ -137,7 +124,7 @@ static bool launch_external_command(Command *cmd) {
             perror("execvp");
         }
 
-        _exit(127);
+        terminate_child(NULL, cmd, EXIT_FAILURE);
     }
       
     // parent process
@@ -155,4 +142,10 @@ static bool launch_external_command(Command *cmd) {
         printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
         process_table[process_count++] = (Process){.pid = pid, .cmd_ptr = cmd, .is_active = 1};
     }
+}
+
+static void terminate_child(const char *error_message, Command *cmd, int exit_status){
+    if (error_message) perror(error_message);
+    free_command(cmd);
+    _exit(exit_status);
 }
