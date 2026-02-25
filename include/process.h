@@ -10,8 +10,4 @@ typedef struct {
     int is_active;
 } Process;
 
-#define MAX_PROCESSES 256
-Process process_table[MAX_PROCESSES];
-int process_count = 0;
-
 #endif

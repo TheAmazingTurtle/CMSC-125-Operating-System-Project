@@ -9,6 +9,10 @@
 #include "interpreter.h"
 #include "process.h"
 
+
+static Process process_table[MAX_PROCESSES];
+static int process_count = 0;
+
 // debug array
 Process completed_processes[MAX_PROCESSES];
 int completed_processes_count = 0;
