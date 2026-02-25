@@ -21,10 +21,8 @@ static bool execute_builtin_command(Command *cmd);
 static bool launch_external_command(Command *cmd);
 static void terminate_child(const char *error_message, Command *cmd, int exit_status);
 
-void handle_command(Command *cmd) {
-    if (execute_builtin_command(cmd)) return;
-
-    launch_external_command(cmd);
+bool handle_command(Command *cmd) {
+    return execute_builtin_command(cmd) || launch_external_command(cmd);
 }
 
 void cleanup_zombies() {
@@ -131,7 +129,6 @@ static bool launch_external_command(Command *cmd) {
     if (!cmd->background) {
         int status;
         waitpid(pid, &status, 0);
-        free_command(cmd);
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
             if (exit_code != 0) {

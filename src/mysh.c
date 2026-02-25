@@ -22,7 +22,7 @@ int main() {
         fflush(stdout);
         
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
-        buffer[strcspn(buffer, "\n")] = 0;                          // to strip \n from line
+        buffer[strcspn(buffer, "\n")] = 0;                              // to strip \n from line
 
         char **token_arr = tokenize(buffer);
         if (token_arr == NULL) continue;
@@ -31,7 +31,7 @@ int main() {
         free_tokens(token_arr);
         if (cmd == NULL) continue;
 
-        handle_command(cmd);
+        if (handle_command(cmd)) free_command(cmd);                     // check if command is done being used, free if true
     }
 
     return 0;
