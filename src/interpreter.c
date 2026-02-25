@@ -87,14 +87,14 @@ static bool execute_builtin_command(Command *cmd) {
 static bool launch_external_command(Command *cmd) {
     if (process_count >= MAX_PROCESSES) {
         printf("mysh: Maximum background job limit reached\n");
-        return;
+        return true;
     }
 
     pid_t pid = fork();
 
     if (pid < 0) {
         perror("fork failed");
-        return;
+        return true;
     }
 
     if (pid == 0) {     // child process
@@ -138,10 +138,14 @@ static bool launch_external_command(Command *cmd) {
                 printf("Command exited with code %d\n", exit_code);
             }
         }
+
+        return true;
     } else {
         printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
         process_table[process_count++] = (Process){.pid = pid, .cmd_ptr = cmd, .is_active = 1};
     }
+
+    return false;
 }
 
 static void terminate_child(const char *error_message, Command *cmd, int exit_status){
