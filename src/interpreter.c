@@ -9,17 +9,16 @@
 #include "interpreter.h"
 #include "process.h"
 
-// debug array
-Process completed_processes[MAX_PROCESSES];
-int completed_processes_count = 0;
+
+static Process process_table[MAX_PROCESSES];
+static int process_count = 0;
 
 static bool execute_builtin_command(Command *cmd);
 static bool launch_external_command(Command *cmd);
+static void terminate_child(const char *error_message, Command *cmd, int exit_status);
 
-void handle_command(Command *cmd) {
-    if (execute_builtin_command(cmd)) return;
-
-    launch_external_command(cmd);
+bool handle_command(Command *cmd) {
+    return execute_builtin_command(cmd) || launch_external_command(cmd);
 }
 
 void cleanup_zombies() {
@@ -33,17 +32,10 @@ void cleanup_zombies() {
             if (process_table[i].pid == pid) {
                 process_table[i].is_active = 0;
                 free_command(process_table[i].cmd_ptr);
-                completed_processes[completed_processes_count++] = process_table[i];
                 process_table[i] = process_table[--process_count];
                 break;
             }
         }
-    }
-
-    // debug print
-    printf("Completed background jobs:\n");
-    for (int i = 0; i < completed_processes_count; i++) {
-        printf("%d\n", completed_processes[i].pid);
     }
 }
 
@@ -82,43 +74,29 @@ static bool execute_builtin_command(Command *cmd) {
 static bool launch_external_command(Command *cmd) {
     if (process_count >= MAX_PROCESSES) {
         printf("mysh: Maximum background job limit reached\n");
-        return;
+        return true;
     }
 
     pid_t pid = fork();
 
     if (pid < 0) {
         perror("fork failed");
-        return;
+        return true;
     }
 
     if (pid == 0) {     // child process
         if (cmd->input_file) {
             int fd = open(cmd->input_file, O_RDONLY);
-            if (fd < 0) {
-                perror("open input file");
-                _exit(1);
-            }
-
-            if (dup2(fd, STDIN_FILENO) == -1) {
-                perror("dup2 failed");
-                _exit(EXIT_FAILURE);
-            }
+            if (fd < 0) terminate_child("open input", cmd, EXIT_FAILURE);
+            if (dup2(fd, STDIN_FILENO) == -1) terminate_child("dup2 failed", cmd, EXIT_FAILURE);
             close(fd);
         }
         if (cmd->output_file) {
             int flags = O_WRONLY | O_CREAT;
             flags |= cmd->append ? O_APPEND : O_TRUNC;
             int fd = open(cmd->output_file, flags, 0644);
-            if (fd < 0) {
-                perror("open output file");
-                _exit(1);
-            }
-
-            if (dup2(fd, STDOUT_FILENO) == -1) {
-                perror("dup2 failed");
-                _exit(EXIT_FAILURE);
-            }
+            if (fd < 0) terminate_child("open output", cmd, EXIT_FAILURE);
+            if (dup2(fd, STDOUT_FILENO) == -1) terminate_child("dup2 failed", cmd, EXIT_FAILURE);
             close(fd);
         }
 
@@ -133,22 +111,24 @@ static bool launch_external_command(Command *cmd) {
             perror("execvp");
         }
 
-        _exit(127);
+        terminate_child(NULL, cmd, EXIT_FAILURE);
     }
       
     // parent process
     if (!cmd->background) {
         int status;
         waitpid(pid, &status, 0);
-        free_command(cmd);
-        if (WIFEXITED(status)) {
-            int exit_code = WEXITSTATUS(status);
-            if (exit_code != 0) {
-                printf("Command exited with code %d\n", exit_code);
-            }
-        }
+        return true;
     } else {
         printf("[%d] Started: %s (PID: %d)\n", getpid(), cmd->command, pid);
         process_table[process_count++] = (Process){.pid = pid, .cmd_ptr = cmd, .is_active = 1};
     }
+
+    return false;
+}
+
+static void terminate_child(const char *error_message, Command *cmd, int exit_status){
+    if (error_message) perror(error_message);
+    free_command(cmd);
+    _exit(exit_status);
 }

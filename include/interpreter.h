@@ -3,7 +3,9 @@
 
 #include "command.h"
 
-void handle_command(Command *cmd);
+#define MAX_PROCESSES 256
+
+bool handle_command(Command *cmd);
 void cleanup_zombies();
 
 #endif
