@@ -8,6 +8,7 @@
 
 #include "interpreter.h"
 #include "process.h"
+#include "history.h"
 
 
 static Process process_table[MAX_PROCESSES];
@@ -63,6 +64,18 @@ static bool execute_builtin_command(Command *cmd) {
             printf("Changing directory...\n");
         } else {
             perror("mysh");
+        }
+
+        return true;
+    }
+
+    if (strcmp(cmd->command, "history") == 0) {
+        if (cmd->args[1] == NULL) {
+            print_history();
+        } else if (strcmp(cmd->args[1], "-c") == 0) {
+            clear_history();
+        } else {
+            fprintf(stderr, "history: invalid option: %s\n", cmd->args[1]);
         }
 
         return true;

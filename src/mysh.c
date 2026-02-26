@@ -5,6 +5,7 @@
 
 #include "command.h"
 
+#include "history.h"
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
@@ -24,6 +25,7 @@ int main() {
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
         buffer[strcspn(buffer, "\n")] = 0;                              // to strip \n from line
 
+        add_history_entry(buffer);
         char **token_arr = tokenize(buffer);
         if (token_arr == NULL) continue;
 
